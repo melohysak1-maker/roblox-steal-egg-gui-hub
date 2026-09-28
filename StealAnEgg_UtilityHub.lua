@@ -1,22 +1,12 @@
---[[
-    GUI Utility Hub - Steal An Egg
-    Roblox Lua Script com Orion Library
-    Desenvolvido para automação em "Steal An Egg"
-]]
-
 local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
-local UserInputService = game:GetService("UserInputService")
-local TweenService = game:GetService("TweenService")
 local Workspace = game:GetService("Workspace")
+local TweenService = game:GetService("TweenService")
 
 local localPlayer = Players.LocalPlayer
-local mouse = localPlayer:GetMouse()
-
 local values = {}
 local currentEggType = "Common"
 
--- Configuração básica
 local defaultSettings = {
     WalkSpeed = 16,
     JumpPower = 50,
@@ -36,9 +26,7 @@ for k,v in pairs(defaultSettings) do
     values[k] = v
 end
 
--- =========================
--- Carregar Orion Library
--- =========================
+-- ==================== ORION LIB ====================
 local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Orion/main/source"))()
 
 local Window = OrionLib:MakeWindow({
@@ -48,18 +36,11 @@ local Window = OrionLib:MakeWindow({
 	ConfigFolder = "OrionConfig"
 })
 
--- =========================
--- Helpers
--- =========================
+-- ==================== HELPERS ====================
 local function getRootPart(char)
     if char and char:FindFirstChild("HumanoidRootPart") then
         return char.HumanoidRootPart
     end
-end
-
-local function getDistance(a, b)
-    if not a or not b then return math.huge end
-    return (a.Position - b.Position).Magnitude
 end
 
 local function fireProximityPrompt(prompt)
@@ -163,56 +144,7 @@ local function getNearestProximityPromptFromModel(model)
     return nearestPrompt, nearestDist
 end
 
-local function openEggByName(name)
-    local eggFolder = Workspace:FindFirstChild("Eggs") or Workspace:FindFirstChild("EggShop") or Workspace:FindFirstChild("EggsShop")
-    if not eggFolder then
-        return false
-    end
-
-    local target = nil
-    for _, obj in ipairs(eggFolder:GetDescendants()) do
-        if obj:IsA("Model") and obj.Name:lower():find(name:lower(), 1, true) then
-            target = obj
-            break
-        end
-    end
-
-    if not target then
-        for _, obj in ipairs(Workspace:GetDescendants()) do
-            if obj:IsA("Model") and obj.Name:lower():find(name:lower(), 1, true) then
-                target = obj
-                break
-            end
-        end
-    end
-
-    if not target then
-        return false
-    end
-
-    local prompt = getNearestProximityPromptFromModel(target)
-    if prompt then
-        fireProximityPrompt(prompt)
-        return true
-    end
-
-    local root = target:FindFirstChild("HumanoidRootPart") or target.PrimaryPart
-    if root then
-        local charRoot = getRootPart(localPlayer.Character)
-        if charRoot then
-            local dist = (charRoot.Position - root.Position).Magnitude
-            if dist > 20 then
-                charRoot.CFrame = CFrame.new(root.Position + Vector3.new(0, 5, 0))
-            end
-        end
-    end
-
-    return false
-end
-
--- =========================
--- ESP System
--- =========================
+-- ==================== ESP ====================
 local espObjects = {}
 
 local function clearEsp()
@@ -228,7 +160,7 @@ local function addEspLabel(obj, color, text)
     if not obj or not obj.Parent then return end
     
     local billboard = Instance.new("BillboardGui")
-    billboard.Name = "ESPLabel_" .. tostring(math.random(1, 100000))
+    billboard.Name = "ESPLabel"
     billboard.AlwaysOnTop = true
     billboard.Size = UDim2.new(0, 200, 0, 40)
     billboard.StudsOffset = Vector3.new(0, 3, 0)
@@ -285,9 +217,7 @@ local function updateEsp()
     end
 end
 
--- =========================
--- Player Mods
--- =========================
+-- ==================== PLAYER MODS ====================
 local function applyPlayerMods()
     if not localPlayer.Character then return end
     local char = localPlayer.Character
@@ -307,9 +237,7 @@ local function applyPlayerMods()
     end
 end
 
--- =========================
--- Main Automation Loops
--- =========================
+-- ==================== LOOPS ====================
 local function autoStealLoop()
     while true do
         if values.AutoSteal and localPlayer.Character then
@@ -415,11 +343,8 @@ local function infiniteJumpLoop()
     end
 end
 
--- =========================
--- GUI TABS
--- =========================
+-- ==================== GUI TABS ====================
 
--- TAB 1: MAIN AUTOMATIONS
 local MainTab = Window:MakeTab({
 	Name = "Main",
 	Icon = "rbxassetid://4483345998",
@@ -618,27 +543,21 @@ InfoTab:AddLabel("✓ ESP System")
 InfoTab:AddLabel("")
 InfoTab:AddLabel("Desenvolvido com Orion Library")
 
--- =========================
--- Runtime
--- =========================
-local function startRuntime()
-    task.spawn(autoStealLoop)
-    task.spawn(autoHatchLoop)
-    task.spawn(autoTrainLoop)
-    task.spawn(infiniteJumpLoop)
+-- ==================== START ====================
+task.spawn(autoStealLoop)
+task.spawn(autoHatchLoop)
+task.spawn(autoTrainLoop)
+task.spawn(infiniteJumpLoop)
 
-    local lastEsp = 0
-    RunService.RenderStepped:Connect(function()
-        applyPlayerMods()
+local lastEsp = 0
+RunService.RenderStepped:Connect(function()
+    applyPlayerMods()
 
-        if tick() - lastEsp > 0.5 then
-            updateEsp()
-            lastEsp = tick()
-        end
-    end)
-end
-
-startRuntime()
+    if tick() - lastEsp > 0.5 then
+        updateEsp()
+        lastEsp = tick()
+    end
+end)
 
 OrionLib:MakeNotification({
 	Name = "GUI Utility Hub",
@@ -647,4 +566,4 @@ OrionLib:MakeNotification({
 	Time = 5
 })
 
-print("✓ Steal An Egg Utility Hub loaded with Orion Library!")
+print("✓ Steal An Egg Utility Hub loaded!")
