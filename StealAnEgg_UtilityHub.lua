@@ -2,6 +2,7 @@ local Players = game:GetService("Players")
 local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 local TweenService = game:GetService("TweenService")
+local CoreGui = game:GetService("CoreGui")
 
 local localPlayer = Players.LocalPlayer
 local values = {}
@@ -22,21 +23,325 @@ local defaultSettings = {
     DelayTrain = 0.2
 }
 
-for k,v in pairs(defaultSettings) do
+for k, v in pairs(defaultSettings) do
     values[k] = v
 end
 
--- ==================== ORION LIB ====================
-local OrionLib = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Orion/main/source"))()
+-- ==================== CUSTOM GUI ====================
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "UtilityHub"
+ScreenGui.ResetOnSpawn = false
+ScreenGui.Parent = CoreGui
 
-local Window = OrionLib:MakeWindow({
-	Name = "GUI Utility Hub - Steal An Egg",
-	HidePremium = false,
-	SaveConfig = true,
-	ConfigFolder = "OrionConfig"
-})
+-- Main Window
+local MainFrame = Instance.new("Frame")
+MainFrame.Name = "MainFrame"
+MainFrame.Size = UDim2.new(0, 500, 0, 600)
+MainFrame.Position = UDim2.new(0.5, -250, 0.5, -300)
+MainFrame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+MainFrame.BorderSizePixel = 0
+MainFrame.Parent = ScreenGui
 
--- ==================== HELPERS ====================
+-- Corner
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 12)
+Corner.Parent = MainFrame
+
+-- Title Bar
+local TitleBar = Instance.new("Frame")
+TitleBar.Name = "TitleBar"
+TitleBar.Size = UDim2.new(1, 0, 0, 40)
+TitleBar.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+TitleBar.BorderSizePixel = 0
+TitleBar.Parent = MainFrame
+
+local TitleCorner = Instance.new("UICorner")
+TitleCorner.CornerRadius = UDim.new(0, 12)
+TitleCorner.Parent = TitleBar
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Name = "TitleLabel"
+TitleLabel.Size = UDim2.new(1, -20, 1, 0)
+TitleLabel.Position = UDim2.new(0, 10, 0, 0)
+TitleLabel.BackgroundTransparency = 1
+TitleLabel.Text = "GUI Utility Hub - Steal An Egg"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.GothamBold
+TitleLabel.TextSize = 16
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Parent = TitleBar
+
+-- Scroll View
+local ScrollFrame = Instance.new("ScrollingFrame")
+ScrollFrame.Name = "ScrollFrame"
+ScrollFrame.Size = UDim2.new(1, -20, 1, -60)
+ScrollFrame.Position = UDim2.new(0, 10, 0, 50)
+ScrollFrame.BackgroundTransparency = 1
+ScrollFrame.ScrollBarThickness = 6
+ScrollFrame.Parent = MainFrame
+
+local UIListLayout = Instance.new("UIListLayout")
+UIListLayout.Padding = UDim.new(0, 8)
+UIListLayout.Parent = ScrollFrame
+
+-- ==================== HELPER FUNCTIONS ====================
+local function createToggleButton(parent, text, default, callback)
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(1, 0, 0, 35)
+    Container.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Container.BorderSizePixel = 0
+    Container.Parent = parent
+
+    local ContainerCorner = Instance.new("UICorner")
+    ContainerCorner.CornerRadius = UDim.new(0, 6)
+    ContainerCorner.Parent = Container
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0, 250, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 13
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Container
+
+    local Toggle = Instance.new("TextButton")
+    Toggle.Name = text
+    Toggle.Size = UDim2.new(0, 45, 0, 22)
+    Toggle.Position = UDim2.new(1, -55, 0.5, -11)
+    Toggle.BackgroundColor3 = default and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(50, 50, 50)
+    Toggle.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Toggle.Text = default and "ON" or "OFF"
+    Toggle.Font = Enum.Font.GothamBold
+    Toggle.TextSize = 11
+    Toggle.BorderSizePixel = 0
+    Toggle.Parent = Container
+
+    local ToggleCorner = Instance.new("UICorner")
+    ToggleCorner.CornerRadius = UDim.new(0, 4)
+    ToggleCorner.Parent = Toggle
+
+    local isEnabled = default
+
+    Toggle.MouseButton1Click:Connect(function()
+        isEnabled = not isEnabled
+        Toggle.BackgroundColor3 = isEnabled and Color3.fromRGB(0, 150, 100) or Color3.fromRGB(50, 50, 50)
+        Toggle.Text = isEnabled and "ON" or "OFF"
+        callback(isEnabled)
+    end)
+
+    return Toggle, function() return isEnabled end
+end
+
+local function createSlider(parent, text, min, max, default, callback)
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(1, 0, 0, 50)
+    Container.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Container.BorderSizePixel = 0
+    Container.Parent = parent
+
+    local ContainerCorner = Instance.new("UICorner")
+    ContainerCorner.CornerRadius = UDim.new(0, 6)
+    ContainerCorner.Parent = Container
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0, 250, 0, 15)
+    Label.Position = UDim2.new(0, 10, 0, 5)
+    Label.BackgroundTransparency = 1
+    Label.Text = text .. ": " .. tostring(default)
+    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 12
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Container
+
+    local SliderBg = Instance.new("Frame")
+    SliderBg.Size = UDim2.new(1, -20, 0, 4)
+    SliderBg.Position = UDim2.new(0, 10, 0, 25)
+    SliderBg.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+    SliderBg.BorderSizePixel = 0
+    SliderBg.Parent = Container
+
+    local SliderCorner = Instance.new("UICorner")
+    SliderCorner.CornerRadius = UDim.new(0, 2)
+    SliderCorner.Parent = SliderBg
+
+    local Slider = Instance.new("TextButton")
+    Slider.Name = "Slider"
+    Slider.Size = UDim2.new(0, 12, 0, 12)
+    Slider.Position = UDim2.new(0, 10, 0.5, -6)
+    Slider.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    Slider.Text = ""
+    Slider.BorderSizePixel = 0
+    Slider.Parent = SliderBg
+
+    local SliderCorner2 = Instance.new("UICorner")
+    SliderCorner2.CornerRadius = UDim.new(0, 6)
+    SliderCorner2.Parent = Slider
+
+    local currentValue = default
+    local isDragging = false
+
+    local function updateSlider(input)
+        local mousePos = input.Position.X
+        local sliderPos = SliderBg.AbsolutePosition.X
+        local sliderSize = SliderBg.AbsoluteSize.X
+
+        local relativePos = math.clamp(mousePos - sliderPos, 0, sliderSize)
+        local percentage = relativePos / sliderSize
+
+        currentValue = math.floor(min + (max - min) * percentage)
+        currentValue = math.clamp(currentValue, min, max)
+
+        local newPosition = (currentValue - min) / (max - min)
+        Slider.Position = UDim2.new(newPosition, -6, 0.5, -6)
+
+        Label.Text = text .. ": " .. tostring(currentValue)
+        callback(currentValue)
+    end
+
+    Slider.MouseButton1Down:Connect(function()
+        isDragging = true
+    end)
+
+    game:GetService("UserInputService").InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 then
+            isDragging = false
+        end
+    end)
+
+    game:GetService("UserInputService").InputChanged:Connect(function(input)
+        if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+            updateSlider(input)
+        end
+    end)
+
+    return Slider
+end
+
+local function createDropdown(parent, text, options, default, callback)
+    local Container = Instance.new("Frame")
+    Container.Size = UDim2.new(1, 0, 0, 35)
+    Container.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+    Container.BorderSizePixel = 0
+    Container.Parent = parent
+
+    local ContainerCorner = Instance.new("UICorner")
+    ContainerCorner.CornerRadius = UDim.new(0, 6)
+    ContainerCorner.Parent = Container
+
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(0, 150, 1, 0)
+    Label.Position = UDim2.new(0, 10, 0, 0)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(220, 220, 220)
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 12
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = Container
+
+    local DropButton = Instance.new("TextButton")
+    DropButton.Size = UDim2.new(0, 100, 0, 25)
+    DropButton.Position = UDim2.new(1, -110, 0.5, -12)
+    DropButton.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+    DropButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+    DropButton.Text = default
+    DropButton.Font = Enum.Font.Gotham
+    DropButton.TextSize = 12
+    DropButton.BorderSizePixel = 0
+    DropButton.Parent = Container
+
+    local DropCorner = Instance.new("UICorner")
+    DropCorner.CornerRadius = UDim.new(0, 4)
+    DropCorner.Parent = DropButton
+
+    local DropMenu = Instance.new("Frame")
+    DropMenu.Name = "DropMenu"
+    DropMenu.Size = UDim2.new(0, 100, 0, #options * 25)
+    DropMenu.Position = UDim2.new(1, -110, 1, 5)
+    DropMenu.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+    DropMenu.BorderSizePixel = 0
+    DropMenu.Visible = false
+    DropMenu.Parent = Container
+
+    local MenuCorner = Instance.new("UICorner")
+    MenuCorner.CornerRadius = UDim.new(0, 4)
+    MenuCorner.Parent = DropMenu
+
+    for _, option in ipairs(options) do
+        local OptionButton = Instance.new("TextButton")
+        OptionButton.Size = UDim2.new(1, 0, 0, 25)
+        OptionButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        OptionButton.TextColor3 = Color3.fromRGB(220, 220, 220)
+        OptionButton.Text = option
+        OptionButton.Font = Enum.Font.Gotham
+        OptionButton.TextSize = 12
+        OptionButton.BorderSizePixel = 0
+        OptionButton.Parent = DropMenu
+
+        OptionButton.MouseButton1Click:Connect(function()
+            DropButton.Text = option
+            DropMenu.Visible = false
+            callback(option)
+        end)
+
+        OptionButton.MouseEnter:Connect(function()
+            OptionButton.BackgroundColor3 = Color3.fromRGB(0, 150, 100)
+        end)
+
+        OptionButton.MouseLeave:Connect(function()
+            OptionButton.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+        end)
+    end
+
+    DropButton.MouseButton1Click:Connect(function()
+        DropMenu.Visible = not DropMenu.Visible
+    end)
+
+    return DropButton
+end
+
+local function createLabel(parent, text)
+    local Label = Instance.new("TextLabel")
+    Label.Size = UDim2.new(1, 0, 0, 20)
+    Label.BackgroundTransparency = 1
+    Label.Text = text
+    Label.TextColor3 = Color3.fromRGB(100, 200, 150)
+    Label.Font = Enum.Font.GothamBold
+    Label.TextSize = 12
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    Label.Parent = parent
+    return Label
+end
+
+-- ==================== BUILD GUI ====================
+createLabel(ScrollFrame, "AUTO FARM")
+local toggleAutoSteal = createToggleButton(ScrollFrame, "Auto Steal / Auto Farm", false, function(v) values.AutoSteal = v end)
+createSlider(ScrollFrame, "Farm Delay", 0.1, 2, 0.25, function(v) values.DelaySteal = v end)
+
+createLabel(ScrollFrame, "AUTO HATCH")
+local toggleAutoHatch = createToggleButton(ScrollFrame, "Auto Hatch / Open Eggs", false, function(v) values.AutoHatch = v end)
+createDropdown(ScrollFrame, "Egg Type", {"Common", "Rare", "Epic", "Legendary", "Mythic"}, "Common", function(v) currentEggType = v end)
+createSlider(ScrollFrame, "Hatch Delay", 0.1, 2, 0.35, function(v) values.DelayHatch = v end)
+
+createLabel(ScrollFrame, "AUTO TRAIN")
+local toggleAutoTrain = createToggleButton(ScrollFrame, "Auto Train / Treadmill", false, function(v) values.AutoTrain = v end)
+createSlider(ScrollFrame, "Train Delay", 0.1, 2, 0.2, function(v) values.DelayTrain = v end)
+
+createLabel(ScrollFrame, "PLAYER MODS")
+createSlider(ScrollFrame, "WalkSpeed", 16, 250, 16, function(v) values.WalkSpeed = v end)
+createSlider(ScrollFrame, "JumpPower", 50, 250, 50, function(v) values.JumpPower = v end)
+local toggleInfJump = createToggleButton(ScrollFrame, "Infinite Jump", false, function(v) values.InfiniteJump = v end)
+local toggleNoclip = createToggleButton(ScrollFrame, "Noclip", false, function(v) values.Noclip = v end)
+
+createLabel(ScrollFrame, "ESP")
+local toggleESPEggs = createToggleButton(ScrollFrame, "ESP Eggs / Rares", false, function(v) values.ESPEggs = v end)
+local toggleESPBase = createToggleButton(ScrollFrame, "ESP Enemy Base", false, function(v) values.ESPBase = v end)
+
+-- ==================== HELPER FUNCTIONS ====================
 local function getRootPart(char)
     if char and char:FindFirstChild("HumanoidRootPart") then
         return char.HumanoidRootPart
@@ -158,7 +463,7 @@ end
 
 local function addEspLabel(obj, color, text)
     if not obj or not obj.Parent then return end
-    
+
     local billboard = Instance.new("BillboardGui")
     billboard.Name = "ESPLabel"
     billboard.AlwaysOnTop = true
@@ -222,7 +527,7 @@ local function applyPlayerMods()
     if not localPlayer.Character then return end
     local char = localPlayer.Character
     local hum = char:FindFirstChildOfClass("Humanoid")
-    
+
     if hum then
         hum.WalkSpeed = values.WalkSpeed
         hum.JumpPower = values.JumpPower
@@ -282,25 +587,17 @@ end
 local function autoHatchLoop()
     while true do
         if values.AutoHatch and localPlayer.Character then
-            local eggSearchNames = {
-                currentEggType .. " Egg",
-                currentEggType,
-                currentEggType:lower() .. "egg"
-            }
-
             local found = false
-            for _, searchName in ipairs(eggSearchNames) do
-                for _, obj in ipairs(Workspace:GetDescendants()) do
-                    if obj:IsA("Model") and obj.Name:lower():find(currentEggType:lower(), 1, true) then
-                        local prompt = getNearestProximityPromptFromModel(obj)
-                        if prompt then
-                            fireProximityPrompt(prompt)
-                            found = true
-                            break
-                        end
+
+            for _, obj in ipairs(Workspace:GetDescendants()) do
+                if obj:IsA("Model") and obj.Name:lower():find(currentEggType:lower(), 1, true) then
+                    local prompt = getNearestProximityPromptFromModel(obj)
+                    if prompt then
+                        fireProximityPrompt(prompt)
+                        found = true
+                        break
                     end
                 end
-                if found then break end
             end
         end
         task.wait(values.DelayHatch)
@@ -343,206 +640,6 @@ local function infiniteJumpLoop()
     end
 end
 
--- ==================== GUI TABS ====================
-
-local MainTab = Window:MakeTab({
-	Name = "Main",
-	Icon = "rbxassetid://4483345998",
-	PremiumOnly = false
-})
-
-MainTab:AddLabel("Auto Farm & Collection")
-
-MainTab:AddToggle({
-	Name = "Auto Steal / Auto Farm",
-	Default = false,
-	Callback = function(Value)
-		values.AutoSteal = Value
-	end	
-})
-
-MainTab:AddSlider({
-	Name = "Farm Delay (Segundos)",
-	Min = 0.1,
-	Max = 2,
-	Default = 0.25,
-	Color = Color3.fromRGB(255,255,255),
-	Increment = 0.05,
-	ValueName = "s",
-	Callback = function(Value)
-		values.DelaySteal = Value
-	end	
-})
-
-MainTab:AddLabel("")
-MainTab:AddLabel("Auto Hatch / Eggs")
-
-MainTab:AddToggle({
-	Name = "Auto Hatch / Auto Open Eggs",
-	Default = false,
-	Callback = function(Value)
-		values.AutoHatch = Value
-	end	
-})
-
-MainTab:AddDropdown({
-	Name = "Tipo de Ovo",
-	Default = "Common",
-	Options = {"Common", "Rare", "Epic", "Legendary", "Mythic"},
-	Callback = function(Value)
-		currentEggType = Value
-	end	
-})
-
-MainTab:AddSlider({
-	Name = "Hatch Delay (Segundos)",
-	Min = 0.1,
-	Max = 2,
-	Default = 0.35,
-	Color = Color3.fromRGB(255,255,255),
-	Increment = 0.05,
-	ValueName = "s",
-	Callback = function(Value)
-		values.DelayHatch = Value
-	end	
-})
-
-MainTab:AddLabel("")
-MainTab:AddLabel("Auto Train / Treadmill")
-
-MainTab:AddToggle({
-	Name = "Auto Train / Treadmill",
-	Default = false,
-	Callback = function(Value)
-		values.AutoTrain = Value
-	end	
-})
-
-MainTab:AddSlider({
-	Name = "Train Delay (Segundos)",
-	Min = 0.1,
-	Max = 2,
-	Default = 0.2,
-	Color = Color3.fromRGB(255,255,255),
-	Increment = 0.05,
-	ValueName = "s",
-	Callback = function(Value)
-		values.DelayTrain = Value
-	end	
-})
-
--- TAB 2: PLAYER MODS
-local PlayerTab = Window:MakeTab({
-	Name = "Player",
-	Icon = "rbxassetid://4483345998",
-	PremiumOnly = false
-})
-
-PlayerTab:AddLabel("Speed & Jump")
-
-PlayerTab:AddSlider({
-	Name = "WalkSpeed",
-	Min = 16,
-	Max = 250,
-	Default = 16,
-	Color = Color3.fromRGB(255,255,255),
-	Increment = 5,
-	ValueName = "",
-	Callback = function(Value)
-		values.WalkSpeed = Value
-	end	
-})
-
-PlayerTab:AddSlider({
-	Name = "JumpPower",
-	Min = 50,
-	Max = 250,
-	Default = 50,
-	Color = Color3.fromRGB(255,255,255),
-	Increment = 5,
-	ValueName = "",
-	Callback = function(Value)
-		values.JumpPower = Value
-	end	
-})
-
-PlayerTab:AddLabel("")
-PlayerTab:AddLabel("Modifiers")
-
-PlayerTab:AddToggle({
-	Name = "Infinite Jump",
-	Default = false,
-	Callback = function(Value)
-		values.InfiniteJump = Value
-	end	
-})
-
-PlayerTab:AddToggle({
-	Name = "Noclip",
-	Default = false,
-	Callback = function(Value)
-		values.Noclip = Value
-	end	
-})
-
--- TAB 3: ESP
-local EspTab = Window:MakeTab({
-	Name = "ESP",
-	Icon = "rbxassetid://4483345998",
-	PremiumOnly = false
-})
-
-EspTab:AddLabel("Visual Helpers")
-
-EspTab:AddToggle({
-	Name = "ESP Eggs / Rares",
-	Default = false,
-	Callback = function(Value)
-		values.ESPEggs = Value
-		if not Value then
-			clearEsp()
-		end
-	end	
-})
-
-EspTab:AddToggle({
-	Name = "ESP Enemy Base",
-	Default = false,
-	Callback = function(Value)
-		values.ESPBase = Value
-		if not Value then
-			clearEsp()
-		end
-	end	
-})
-
-EspTab:AddButton({
-	Name = "Clear ESP",
-	Callback = function()
-      		clearEsp()
-  	end    
-})
-
--- TAB 4: INFO
-local InfoTab = Window:MakeTab({
-	Name = "Info",
-	Icon = "rbxassetid://4483345998",
-	PremiumOnly = false
-})
-
-InfoTab:AddLabel("GUI Utility Hub v1.0")
-InfoTab:AddLabel("Steal An Egg Script")
-InfoTab:AddLabel("")
-InfoTab:AddLabel("Funcionalidades:")
-InfoTab:AddLabel("✓ Auto Steal / Auto Farm")
-InfoTab:AddLabel("✓ Auto Hatch / Open Eggs")
-InfoTab:AddLabel("✓ Auto Train / Treadmill")
-InfoTab:AddLabel("✓ Player Mods (Speed, Jump)")
-InfoTab:AddLabel("✓ Noclip & Infinite Jump")
-InfoTab:AddLabel("✓ ESP System")
-InfoTab:AddLabel("")
-InfoTab:AddLabel("Desenvolvido com Orion Library")
-
 -- ==================== START ====================
 task.spawn(autoStealLoop)
 task.spawn(autoHatchLoop)
@@ -559,11 +656,4 @@ RunService.RenderStepped:Connect(function()
     end
 end)
 
-OrionLib:MakeNotification({
-	Name = "GUI Utility Hub",
-	Content = "Script loaded successfully!",
-	Image = "rbxassetid://4483345998",
-	Time = 5
-})
-
-print("✓ Steal An Egg Utility Hub loaded!")
+print("✓ GUI Utility Hub loaded!")
