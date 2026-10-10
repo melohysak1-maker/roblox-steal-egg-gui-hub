@@ -21,72 +21,22 @@ local settings = {
 
 getgenv().infstamina = false
 
--- ==================== Rayfield ====================
-local RayfieldSuccess, Rayfield = pcall(function()
-    return loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source.lua"))()
-end)
+-- ==================== RAYFIELD LIBRARY ====================
+local Rayfield = loadstring(game:HttpGet("https://raw.githubusercontent.com/shlexware/Rayfield/main/source.lua"))()
 
-if not RayfieldSuccess then
-    warn("Rayfield failed to load. Reverting to fallback GUI.")
-end
+local Window = Rayfield:CreateWindow({
+    Name = "Illegal Soccer Hub",
+    LoadingTitle = "Loading Illegal Soccer Hub",
+    LoadingSubtitle = "By Copilot",
+    ConfigurationSaving = {
+        Enabled = true,
+        FolderName = "IllegalSoccerHub",
+        FileName = "Config"
+    },
+    KeySystem = false,
+})
 
-local Window = nil
-if RayfieldSuccess then
-    Window = Rayfield:CreateWindow({
-        Name = "Illegal Soccer Hub",
-        LoadingTitle = "Loading...",
-        LoadingSubtitle = "by Copilot",
-        ConfigurationSaving = true,
-        KeySystem = false,
-    })
-end
-
-local function createFallbackGui()
-    local screen = Instance.new("ScreenGui")
-    screen.Name = "FallbackIllegalSoccerHub"
-    screen.ResetOnSpawn = false
-    screen.Parent = CoreGui
-
-    local frame = Instance.new("Frame")
-    frame.Size = UDim2.new(0, 400, 0, 220)
-    frame.Position = UDim2.new(0.5, -200, 0.5, -110)
-    frame.BackgroundColor3 = Color3.fromRGB(18, 18, 18)
-    frame.BorderSizePixel = 0
-    frame.Parent = screen
-
-    local corner = Instance.new("UICorner")
-    corner.CornerRadius = UDim.new(0, 12)
-    corner.Parent = frame
-
-    local title = Instance.new("TextLabel")
-    title.Size = UDim2.new(1, -20, 0, 30)
-    title.Position = UDim2.new(0, 10, 0, 8)
-    title.BackgroundTransparency = 1
-    title.Text = "Illegal Soccer Hub"
-    title.TextColor3 = Color3.fromRGB(255,255,255)
-    title.Font = Enum.Font.GothamBold
-    title.TextSize = 18
-    title.Parent = frame
-
-    local text = Instance.new("TextLabel")
-    text.Size = UDim2.new(1, -20, 1, -50)
-    text.Position = UDim2.new(0, 10, 0, 40)
-    text.BackgroundTransparency = 1
-    text.Text = "Rayfield not loaded.\nMake sure the library URL is valid or load Rayfield manually."
-    text.TextColor3 = Color3.fromRGB(220,220,220)
-    text.Font = Enum.Font.Gotham
-    text.TextSize = 14
-    text.TextWrapped = true
-    text.Parent = frame
-
-    return screen
-end
-
-if not Window then
-    createFallbackGui()
-end
-
--- ==================== Infinite Stamina Setup ====================
+-- ==================== INFINITE STAMINA SETUP ====================
 local function hookInfiniteStamina()
     local SprintSuccess, SprintModule = pcall(function()
         return require(ReplicatedStorage.Modules.Actions.Sprint)
@@ -127,7 +77,7 @@ end
 
 hookInfiniteStamina()
 
--- ==================== Utility Functions ====================
+-- ==================== UTILITY FUNCTIONS ====================
 local function getRootPart(character)
     if character and character:FindFirstChild("HumanoidRootPart") then
         return character.HumanoidRootPart
@@ -145,6 +95,7 @@ local function getPlayersList()
 end
 
 local espLabels = {}
+
 local function clearESP()
     for _, label in ipairs(espLabels) do
         if label and label.Parent then
@@ -230,147 +181,187 @@ local function autoActionLoop()
     while true do
         if localPlayer.Character then
             if settings.AutoSprint then
-                -- generic behavior; actual game inputs may differ
                 local hum = localPlayer.Character:FindFirstChildOfClass("Humanoid")
                 if hum then
                     hum:Move(Vector3.new(1, 0, 0), true)
                 end
-            end
-
-            if settings.AutoPass or settings.AutoShoot then
-                -- placeholder for game specific controls; leave off by default
             end
         end
         task.wait(settings.DelayAutoAction)
     end
 end
 
--- ==================== Rayfield Tabs ====================
-if Window then
-    local MainTab = Window:CreateTab("Main", 4483345998)
-    local PlayerTab = Window:CreateTab("Player", 4483345998)
-    local ESPTab = Window:CreateTab("ESP", 4483345998)
+-- ==================== RAYFIELD TABS ====================
 
-    MainTab:CreateToggle({
-        Name = "Infinite Stamina",
-        CurrentValue = false,
-        Flag = "InfiniteStamina",
-        Callback = function(value)
-            settings.InfiniteStamina = value
-            getgenv().infstamina = value
-        end,
-    })
+-- ==================== MAIN TAB ====================
+local MainTab = Window:CreateTab("Main", 4483345998)
+local MainSection = MainTab:CreateSection("Stamina")
 
-    MainTab:CreateToggle({
-        Name = "Auto Sprint",
-        CurrentValue = false,
-        Flag = "AutoSprint",
-        Callback = function(value)
-            settings.AutoSprint = value
-        end,
-    })
+MainTab:CreateToggle({
+    Name = "Infinite Stamina",
+    CurrentValue = false,
+    Flag = "InfiniteStamina",
+    Callback = function(value)
+        settings.InfiniteStamina = value
+        getgenv().infstamina = value
+    end,
+})
 
-    MainTab:CreateToggle({
-        Name = "Auto Pass",
-        CurrentValue = false,
-        Flag = "AutoPass",
-        Callback = function(value)
-            settings.AutoPass = value
-        end,
-    })
+local AutoActionsSection = MainTab:CreateSection("Auto Actions")
 
-    MainTab:CreateToggle({
-        Name = "Auto Shoot",
-        CurrentValue = false,
-        Flag = "AutoShoot",
-        Callback = function(value)
-            settings.AutoShoot = value
-        end,
-    })
+MainTab:CreateToggle({
+    Name = "Auto Sprint",
+    CurrentValue = false,
+    Flag = "AutoSprint",
+    Callback = function(value)
+        settings.AutoSprint = value
+    end,
+})
 
-    MainTab:CreateSlider({
-        Name = "Action Delay",
-        Range = {0.1, 2},
-        Increment = 0.1,
-        Suffix = "s",
-        CurrentValue = 0.5,
-        Flag = "ActionDelay",
-        Callback = function(value)
-            settings.DelayAutoAction = value
-        end,
-    })
+MainTab:CreateToggle({
+    Name = "Auto Pass",
+    CurrentValue = false,
+    Flag = "AutoPass",
+    Callback = function(value)
+        settings.AutoPass = value
+    end,
+})
 
-    PlayerTab:CreateSlider({
-        Name = "WalkSpeed",
-        Range = {16, 250},
-        Increment = 1,
-        Suffix = "",
-        CurrentValue = 16,
-        Flag = "WalkSpeed",
-        Callback = function(value)
-            settings.WalkSpeed = value
-        end,
-    })
+MainTab:CreateToggle({
+    Name = "Auto Shoot",
+    CurrentValue = false,
+    Flag = "AutoShoot",
+    Callback = function(value)
+        settings.AutoShoot = value
+    end,
+})
 
-    PlayerTab:CreateSlider({
-        Name = "JumpPower",
-        Range = {50, 250},
-        Increment = 1,
-        Suffix = "",
-        CurrentValue = 50,
-        Flag = "JumpPower",
-        Callback = function(value)
-            settings.JumpPower = value
-        end,
-    })
+MainTab:CreateSlider({
+    Name = "Action Delay",
+    Range = {0.1, 2},
+    Increment = 0.1,
+    Suffix = "s",
+    CurrentValue = 0.5,
+    Flag = "ActionDelay",
+    Callback = function(value)
+        settings.DelayAutoAction = value
+    end,
+})
 
-    PlayerTab:CreateToggle({
-        Name = "Infinite Jump",
-        CurrentValue = false,
-        Flag = "InfiniteJump",
-        Callback = function(value)
-            settings.InfiniteJump = value
-        end,
-    })
+-- ==================== PLAYER TAB ====================
+local PlayerTab = Window:CreateTab("Player", 4483345998)
+local SpeedSection = PlayerTab:CreateSection("Speed & Jump")
 
-    PlayerTab:CreateToggle({
-        Name = "Noclip",
-        CurrentValue = false,
-        Flag = "Noclip",
-        Callback = function(value)
-            settings.Noclip = value
-        end,
-    })
+PlayerTab:CreateSlider({
+    Name = "WalkSpeed",
+    Range = {16, 250},
+    Increment = 1,
+    Suffix = "",
+    CurrentValue = 16,
+    Flag = "WalkSpeed",
+    Callback = function(value)
+        settings.WalkSpeed = value
+    end,
+})
 
-    ESPTab:CreateToggle({
-        Name = "ESP Players",
-        CurrentValue = false,
-        Flag = "ESPPlayers",
-        Callback = function(value)
-            settings.ESPPlayers = value
-            if not value then
-                clearESP()
-            end
-        end,
-    })
-end
+PlayerTab:CreateSlider({
+    Name = "JumpPower",
+    Range = {50, 250},
+    Increment = 1,
+    Suffix = "",
+    CurrentValue = 50,
+    Flag = "JumpPower",
+    Callback = function(value)
+        settings.JumpPower = value
+    end,
+})
 
--- ==================== Runtime ====================
-if Window then
-    local notification = Rayfield.Notify({
-        Title = "Illegal Soccer Hub",
-        Content = "Loaded successfully.",
-        Duration = 5,
-        Image = 4483345998,
-    })
-end
+local ModifiersSection = PlayerTab:CreateSection("Modifiers")
+
+PlayerTab:CreateToggle({
+    Name = "Infinite Jump",
+    CurrentValue = false,
+    Flag = "InfiniteJump",
+    Callback = function(value)
+        settings.InfiniteJump = value
+    end,
+})
+
+PlayerTab:CreateToggle({
+    Name = "Noclip",
+    CurrentValue = false,
+    Flag = "Noclip",
+    Callback = function(value)
+        settings.Noclip = value
+    end,
+})
+
+-- ==================== ESP TAB ====================
+local ESPTab = Window:CreateTab("ESP", 4483345998)
+local ESPSection = ESPTab:CreateSection("Visual")
+
+ESPTab:CreateToggle({
+    Name = "ESP Players",
+    CurrentValue = false,
+    Flag = "ESPPlayers",
+    Callback = function(value)
+        settings.ESPPlayers = value
+        if not value then
+            clearESP()
+        end
+    end,
+})
+
+ESPTab:CreateButton({
+    Name = "Clear ESP",
+    Callback = function()
+        clearESP()
+        Rayfield:Notify({
+            Title = "ESP",
+            Content = "Cleared all ESP labels",
+            Duration = 3,
+            Image = 4483345998,
+        })
+    end,
+})
+
+-- ==================== INFO TAB ====================
+local InfoTab = Window:CreateTab("Info", 4483345998)
+local InfoSection = InfoTab:CreateSection("About")
+
+InfoTab:CreateLabel("Illegal Soccer Hub v1.0")
+InfoTab:CreateLabel("Created by Copilot")
+InfoTab:CreateLabel("")
+InfoTab:CreateLabel("Features:")
+InfoTab:CreateLabel("✓ Infinite Stamina")
+InfoTab:CreateLabel("✓ Auto Sprint")
+InfoTab:CreateLabel("✓ Player Mods")
+InfoTab:CreateLabel("✓ Noclip & Infinite Jump")
+InfoTab:CreateLabel("✓ ESP System")
+
+InfoTab:CreateLabel("")
+InfoTab:CreateLabel("Note: This is for")
+InfoTab:CreateLabel("educational purposes only.")
+
+-- ==================== RUNTIME ====================
+Rayfield:Notify({
+    Title = "Illegal Soccer Hub",
+    Content = "Script loaded successfully!",
+    Duration = 5,
+    Image = 4483345998,
+})
 
 task.spawn(infiniteJumpLoop)
 task.spawn(autoActionLoop)
 
+local lastESPUpdate = 0
 RunService.RenderStepped:Connect(function()
     applyPlayerMods()
-    updateESP()
+    
+    if tick() - lastESPUpdate > 0.5 then
+        updateESP()
+        lastESPUpdate = tick()
+    end
 end)
 
-print("Illegal Soccer Hub loaded successfully.")
+print("✓ Illegal Soccer Hub loaded with Rayfield!")
